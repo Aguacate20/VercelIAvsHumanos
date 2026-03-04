@@ -247,7 +247,7 @@ export default function ExperimentPage() {
             <div className="mt-6">
               <div className="flex justify-between items-end mb-3 px-1">
                 <div className="flex flex-col items-center gap-1">
-                  <div className="relative w-16 h-16 md:w-20 md:h-20">
+                  <div className="relative w-24 h-24 md:w-36 md:h-36">
                     <Image src={AI_IMAGE} alt="IA" fill className="object-contain" unoptimized />
                   </div>
                   <span className="text-xs font-body font-bold text-sabana-blue">IA</span>
