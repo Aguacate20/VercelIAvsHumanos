@@ -116,11 +116,12 @@ export async function saveSituationResponse(
 ) {
   const { error } = await supabase
     .from('situationresponses')
-    .insert({
+    .upsert({
       participant_id: participantId,
       situation_index: situationIndex,
       response: `${sliderValue} - ${responseTime.toFixed(2)}`,
+    }, {
+      onConflict: 'participant_id,situation_index'
     })
-
   if (error) throw error
 }
