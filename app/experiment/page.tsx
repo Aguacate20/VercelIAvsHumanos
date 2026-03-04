@@ -17,12 +17,23 @@ export default function ExperimentPage() {
   const [sliderValue, setSliderValue] = useState(50)
   const [loading, setLoading] = useState(false)
   const [participantId, setParticipantId] = useState<string | null>(null)
+  const [resumeFrom, setResumeFrom] = useState<number | null>(null)
   const startTimeRef = useRef<number>(Date.now())
 
   useEffect(() => {
     const id = sessionStorage.getItem('participant_id')
     if (!id) { router.replace('/'); return }
     setParticipantId(id)
+
+    // Check if resuming from a previous session
+    const savedResume = sessionStorage.getItem('resume_from')
+    if (savedResume) {
+      const idx = parseInt(savedResume)
+      if (idx > 0 && idx < situations.length) {
+        setResumeFrom(idx)
+      }
+      sessionStorage.removeItem('resume_from')
+    }
   }, [router])
 
   // Reset slider and timer on each new situation
@@ -32,6 +43,20 @@ export default function ExperimentPage() {
       startTimeRef.current = Date.now()
     }
   }, [situationIndex, screen])
+
+  function handleResume() {
+    if (resumeFrom !== null) {
+      setSituationIndex(resumeFrom)
+      setResumeFrom(null)
+      setScreen('experiment')
+      startTimeRef.current = Date.now()
+    }
+  }
+
+  function handleStartFromBeginning() {
+    setResumeFrom(null)
+    // keep screen as intro_ai — normal flow
+  }
 
   const handleNext = useCallback(async () => {
     if (loading) return
@@ -61,12 +86,41 @@ export default function ExperimentPage() {
     }
   }, [loading, screen, participantId, situationIndex, sliderValue])
 
-  // Update CSS variable for slider gradient
-  function handleSliderChange(val: number) {
-    setSliderValue(val)
-  }
-
   if (!participantId) return null
+
+  // ─── Resume prompt ──────────────────────────────────────────────────────────
+  if (resumeFrom !== null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4"
+        style={{ background: 'linear-gradient(160deg, #182a67 0%, #2a4199 100%)' }}>
+        <div className="card w-full max-w-md p-8 text-center fade-in">
+          <div className="w-16 h-16 bg-sabana-blue-muted rounded-full flex items-center justify-center mx-auto mb-4">
+            <span className="text-3xl">↩</span>
+          </div>
+          <h2 className="text-2xl font-heading text-sabana-blue mb-3">Progreso encontrado</h2>
+          <p className="text-gray-500 font-body text-sm mb-6 leading-relaxed">
+            Tienes {resumeFrom} situaciones completadas.<br />
+            ¿Deseas continuar desde la situación <strong>{resumeFrom + 1}</strong> o empezar desde el principio?
+          </p>
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={handleResume}
+              className="w-full py-3.5 rounded-xl font-body font-semibold text-white text-sm"
+              style={{ background: 'linear-gradient(135deg, #182a67, #2a4199)' }}
+            >
+              Continuar desde situación {resumeFrom + 1} →
+            </button>
+            <button
+              onClick={handleStartFromBeginning}
+              className="w-full py-3 rounded-xl font-body font-medium text-sabana-blue text-sm border-2 border-sabana-blue/30 hover:border-sabana-blue/60 hover:bg-sabana-blue-muted transition-all"
+            >
+              Empezar desde el principio
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // ─── Finished ───────────────────────────────────────────────────────────────
   if (screen === 'finished') {
@@ -102,7 +156,6 @@ export default function ExperimentPage() {
     return (
       <div className="min-h-screen flex flex-col"
         style={{ background: 'linear-gradient(160deg, #182a67 0%, #2a4199 100%)' }}>
-        {/* Header */}
         <header className="px-6 py-4 flex items-center gap-3">
           <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-xs font-heading">US</span>
@@ -110,7 +163,6 @@ export default function ExperimentPage() {
           <p className="text-white/70 text-xs font-body">Universidad de La Sabana · Experimento</p>
         </header>
 
-        {/* Step indicator */}
         <div className="flex justify-center gap-2 mb-6 px-4">
           {['intro_ai', 'intro_human', 'experiment'].map((s, i) => (
             <div key={s} className={`h-1.5 rounded-full transition-all duration-300 ${
@@ -125,7 +177,6 @@ export default function ExperimentPage() {
 
         <main className="flex-1 flex flex-col items-center justify-center px-4 pb-8">
           <div className="card w-full max-w-md overflow-hidden fade-in">
-            {/* Image area */}
             <div className="relative bg-sabana-blue-muted" style={{ height: '280px' }}>
               <Image
                 src={isAI ? AI_IMAGE : HUMAN_IMAGE}
@@ -135,8 +186,6 @@ export default function ExperimentPage() {
                 unoptimized
               />
             </div>
-
-            {/* Content */}
             <div className="p-6">
               <div className="inline-block px-3 py-1 rounded-full text-xs font-body font-medium mb-3"
                 style={{ background: '#e8ecf7', color: '#182a67' }}>
@@ -166,12 +215,11 @@ export default function ExperimentPage() {
 
   // ─── Main experiment screen ─────────────────────────────────────────────────
   const situation = situations[situationIndex]
-  const progress = ((situationIndex) / situations.length) * 100
+  const progress = (situationIndex / situations.length) * 100
   const sliderPct = sliderValue
 
   return (
     <div className="min-h-screen bg-[#f7f8fc] flex flex-col">
-      {/* Top progress bar */}
       <div className="bg-sabana-blue">
         <div className="flex items-center px-4 py-2.5 gap-3 max-w-3xl mx-auto">
           <span className="text-white/70 text-xs font-body whitespace-nowrap">
@@ -185,8 +233,6 @@ export default function ExperimentPage() {
 
       <main className="flex-1 flex flex-col items-center px-4 py-6 md:py-10">
         <div className="w-full max-w-3xl">
-
-          {/* Situation card */}
           <div className="card p-6 md:p-8 mb-6 fade-in" key={situationIndex}>
             <div className="text-center mb-6">
               <span className="inline-block px-3 py-1 rounded-full text-xs font-body font-medium mb-4"
@@ -198,9 +244,7 @@ export default function ExperimentPage() {
               </p>
             </div>
 
-            {/* Agents + Slider */}
             <div className="mt-6">
-              {/* Labels row */}
               <div className="flex justify-between items-end mb-3 px-1">
                 <div className="flex flex-col items-center gap-1">
                   <div className="relative w-16 h-16 md:w-20 md:h-20">
@@ -212,7 +256,6 @@ export default function ExperimentPage() {
 
                 <div className="flex-1 px-3 md:px-6 flex flex-col items-center gap-1">
                   <div className="w-full relative">
-                    {/* Slider value bubble */}
                     <div
                       className="absolute -top-8 transform -translate-x-1/2 bg-sabana-blue text-white text-xs font-body font-bold px-2 py-0.5 rounded-full pointer-events-none transition-all"
                       style={{ left: `${sliderPct}%` }}
@@ -224,7 +267,7 @@ export default function ExperimentPage() {
                       min={0}
                       max={100}
                       value={sliderValue}
-                      onChange={e => handleSliderChange(Number(e.target.value))}
+                      onChange={e => setSliderValue(Number(e.target.value))}
                       className="custom-slider w-full"
                       style={{ '--slider-pct': `${sliderPct}%` } as React.CSSProperties}
                     />
@@ -243,7 +286,6 @@ export default function ExperimentPage() {
                 </div>
               </div>
 
-              {/* Semantic labels */}
               <div className="flex justify-between mt-1 px-1">
                 <span className="text-xs font-body text-sabana-blue font-medium">← Confío más en IA</span>
                 <span className="text-xs font-body text-sabana-blue font-medium">Confío más en Humano →</span>
@@ -251,7 +293,6 @@ export default function ExperimentPage() {
             </div>
           </div>
 
-          {/* Submit button */}
           <button
             onClick={handleNext}
             disabled={loading}
@@ -264,10 +305,8 @@ export default function ExperimentPage() {
                 ? 'Finalizar experimento ✓'
                 : 'Siguiente situación →'}
           </button>
-
         </div>
       </main>
     </div>
   )
 }
-
