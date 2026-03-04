@@ -7,7 +7,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export async function saveQuestionnaireData(data: Record<string, unknown>) {
   const { data: result, error } = await supabase
-    .table('respuestas')
+    .from('respuestas')
     .insert({
       consentimiento: data['consentimiento'],
       document_id: data['document_id'],
