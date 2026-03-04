@@ -206,10 +206,8 @@ export default function QuestionnairePage() {
       }
       allLikertKeys.forEach(k => { data[k] = form[k] })
 
-      const participantId = await saveQuestionnaireData(data)
-      sessionStorage.setItem('participant_id', participantId)
-      sessionStorage.setItem('participant_name', pendingName)
-      sessionStorage.setItem('document_id', pendingDoc)
+      const participantId = sessionStorage.getItem('participant_id')!
+      await saveQuestionnaireData(participantId, data)
       router.push('/experiment')
     } catch (e) {
       setError('Error al guardar los datos. Intenta de nuevo.')
