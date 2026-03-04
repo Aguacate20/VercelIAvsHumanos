@@ -5,13 +5,34 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-export async function saveQuestionnaireData(data: Record<string, unknown>) {
+// ── Paso 1: Guardar datos básicos al comenzar (landing) ──────────────────────
+export async function createInitialRecord(data: {
+  consentimiento: string
+  document_id: string
+  name: string
+}) {
   const { data: result, error } = await supabase
     .from('respuestas')
     .insert({
-      consentimiento: data['consentimiento'],
-      document_id: data['document_id'],
-      name: data['name'],
+      consentimiento: data.consentimiento,
+      document_id: data.document_id,
+      name: data.name,
+    })
+    .select('id')
+    .single()
+
+  if (error) throw error
+  return result.id as string
+}
+
+// ── Paso 2: Guardar cuestionario completo (update del registro existente) ─────
+export async function saveQuestionnaireData(
+  participantId: string,
+  data: Record<string, unknown>
+) {
+  const { error } = await supabase
+    .from('respuestas')
+    .update({
       nationality: data['nationality'],
       birthdate: data['birthdate'],
       devices: data['devices'],
@@ -53,13 +74,12 @@ export async function saveQuestionnaireData(data: Record<string, unknown>) {
       how_should_ai_be_used_9: data['how_should_ai_be_used_9'],
       how_should_ai_be_used_10: data['how_should_ai_be_used_10'],
     })
-    .select('id')
-    .single()
+    .eq('id', participantId)
 
   if (error) throw error
-  return result.id as string
 }
 
+// ── Buscar participante por documento ────────────────────────────────────────
 export async function findParticipantByDocument(documentId: string) {
   const { data, error } = await supabase
     .from('respuestas')
@@ -70,9 +90,24 @@ export async function findParticipantByDocument(documentId: string) {
     .single()
 
   if (error) return null
-  return data
+  return data as { id: string; name: string }
 }
 
+// ── Obtener en qué situación se quedó el participante ────────────────────────
+export async function getParticipantProgress(participantId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from('situationresponses')
+    .select('situation_index')
+    .eq('participant_id', participantId)
+    .order('situation_index', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (error || !data) return 0
+  return (data.situation_index as number) + 1
+}
+
+// ── Guardar respuesta de situación ───────────────────────────────────────────
 export async function saveSituationResponse(
   participantId: string,
   situationIndex: number,
